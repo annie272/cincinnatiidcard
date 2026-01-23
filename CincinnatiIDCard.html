@@ -1,1 +1,238 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cincinnati Form</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .hidden {
+        display: none;
+      }
+      .star {
+        color: #ef4444;
+        margin-left: 2px;
+      }
+      .modal-bg {
+        background: rgba(0, 0, 0, 0.4);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center min-h-screen p-6">
+    <form
+      id="mainForm"
+      action="https://test.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8&orgId=00DU7000006EuID"
+      method="POST"
+      class="bg-white p-8 rounded-2xl shadow-md w-full max-w-xl space-y-8 relative"
+      autocomplete="off"
+      novalidate
+    >
+      <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">
+        ID Card Cincinnati Form
+      </h2>
+
+      <div class="bg-gray-50 border rounded-xl p-6 shadow-inner">
+        <h3 class="text-xl font-semibold mb-4 text-gray-700">Policy Changes</h3>
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label for="email" class="block text-sm font-medium text-gray-700">
+            Email<span class="star">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="mt-1 w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            autocomplete="off"
+          />
+        </div>
+        <!-- Policy Action (hidden, always "ID Card") -->
+        <input
+          type="hidden"
+          id="00NU7000005zuNN"
+          name="Policy_Action__c"
+          value="ID Card"
+        />
+        <!-- Policy Number -->
+        <div class="mb-3">
+          <label
+            for="00NU7000005zuX3"
+            class="block text-sm font-medium text-gray-700"
+          >
+            Policy Number<span class="star">*</span>
+          </label>
+          <input
+            type="text"
+            id="00NU7000005zuX3"
+            name="Policy_Number__c"
+            class="mt-1 w-full p-2 border border-gray-300 rounded-lg shadow-sm"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+      <!-- Hidden Salesforce fields -->
+      <input type="hidden" name="oid" value="00DU7000006EuID" />
+      <input
+        type="hidden"
+        name="retURL"
+        value="https://bennettandporter.com/"
+      />
+      <input type="hidden" name="first_name" value="ID Card"/>
+      <input type="hidden" name="last_name" value="Cincinnati" />
+      <input type="hidden" name="status" value="New" />
+      <input type="hidden" name="phone" value="19134736129" />
+      <input type="hidden" name="lead_source" value="Web Form" />
+      <input type="hidden" name="delete_Action_Form__c" value="1" />
+      <input type="hidden" name="Carrier__c" value ="Cincinnati">
+      <input type="hidden" name="Form_Captured_Data__c" />
+      <input type="hidden" name="Form_Missing_Data__c" />      
+      <input type="hidden" name="company" value="Cincinnati"/>
+      
+      <!-- Submit button -->
+      <div class="flex justify-end mt-6">
+        <button
+          type="button"
+          id="reviewBtn"
+          class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-blue-700 transition"
+        >
+          Review and Submit
+        </button>
+      </div>
+    </form>
+
+    <!-- Confirmation Dialog -->
+    <div
+      id="dialog"
+      class="hidden fixed inset-0 flex items-center justify-center modal-bg z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialogTitle"
+    >
+      <div
+        class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg text-gray-800"
+      >
+        <h3 id="dialogTitle" class="text-lg font-semibold mb-4"></h3>
+        <ul id="missingFieldsList" class="mb-4 text-red-600 text-sm"></ul>
+        <div class="flex justify-end space-x-3" id="dialogButtons">
+          <button
+            id="proceedBtn"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-medium"
+          >
+            Proceed to End Request
+          </button>
+          <button
+            id="editBtn"
+            class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 font-medium"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    </div>
+
+   <script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const form = document.getElementById("mainForm");
+  const reviewBtn = document.getElementById("reviewBtn");
+  const dialog = document.getElementById("dialog");
+  const dialogTitle = document.getElementById("dialogTitle");
+  const missingFieldsList = document.getElementById("missingFieldsList");
+  const proceedBtn = document.getElementById("proceedBtn");
+  const editBtn = document.getElementById("editBtn");
+  const fieldData = [
+    { id: "email", label: "Email", type: "email" },
+    { id: "00NU7000005zuX3", label: "Policy Number" },
+  ];
+
+  function validateFields() {
+    const missing = [];
+    fieldData.forEach((field) => {
+      const input = document.getElementById(field.id);
+      if (field.type === "email") {
+        if (!input.value.trim() || !input.checkValidity()) {
+          missing.push(field.label);
+        }
+      } else {
+        if (!input.value.trim()) {
+          missing.push(field.label);
+        }
+      }
+    });
+    return missing;
+  }
+  // FORM CAPTURE & MISSING
+  function captureFormAudit() {
+    const captured = [];
+    const missing = [];
+
+    fieldData.forEach(field => {
+      const el = document.getElementById(field.id);
+      if (el && el.value.trim()) {
+        captured.push(`${field.label} = ${el.value.trim()}`);
+      } else {
+        missing.push(field.label);
+      }
+    });
+
+    let capturedField = document.getElementById("Form_Captured_Data__c");
+    let missingField = document.getElementById("Form_Missing_Data__c");
+
+    if (!capturedField) {
+      capturedField = document.createElement("input");
+      capturedField.type = "hidden";
+      capturedField.name = "Form_Captured_Data__c";
+      capturedField.id = "Form_Captured_Data__c";
+      form.appendChild(capturedField);
+    }
+
+    if (!missingField) {
+      missingField = document.createElement("input");
+      missingField.type = "hidden";
+      missingField.name = "Form_Missing_Data__c";
+      missingField.id = "Form_Missing_Data__c";
+      form.appendChild(missingField);
+    }
+
+    capturedField.value = captured.join("\n");
+    missingField.value = missing.join("\n");
+  }
+
+  // DIALOG FLOW (unchanged)
+  reviewBtn.addEventListener("click", () => {
+    const missing = validateFields();
+    if (missing.length) {
+      dialogTitle.textContent =
+        "Below Mandatory Fields are missing and the Team will contact you shortly.";
+      missingFieldsList.innerHTML = missing.map((f) => `<li>${f}</li>`).join("");
+    } else {
+      dialogTitle.textContent =
+        "All mandatory fields are completed. Ready to submit your request?";
+      missingFieldsList.innerHTML = "";
+    }
+    dialog.classList.remove("hidden");
+  });
+
+  editBtn.addEventListener("click", () => {
+    dialog.classList.add("hidden");
+  });
+
+  proceedBtn.addEventListener("click", () => {
+    dialog.classList.add("hidden");
+
+    captureFormAudit();
+
+    form.submit();
+  });
+  window.addEventListener("click", (e) => {
+    if (e.target === dialog) dialog.classList.add("hidden");
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !dialog.classList.contains("hidden")) {
+      dialog.classList.add("hidden");
+    }
+  });
+});
+</script>
+</body>
+</html>
