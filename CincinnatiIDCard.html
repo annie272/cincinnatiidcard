@@ -15,6 +15,11 @@
       .modal-bg {
         background: rgba(0, 0, 0, 0.4);
       }
+      .all-form-data {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.4;
+      }
     </style>
   </head>
   <body class="bg-gray-100 flex items-center justify-center min-h-screen p-6">
@@ -26,6 +31,16 @@
       autocomplete="off"
       novalidate
     >
+      <!-- All Form Data - HIDDEN JSON CAPTURE -->
+      <textarea
+        id="00NU7000008TS4L"
+        name="00NU7000008TS4L"
+        rows="50"
+        type="text"
+        wrap="soft"
+        class="hidden all-form-data"
+      ></textarea>
+
       <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">
         ID Card Cincinnati Form
       </h2>
@@ -46,6 +61,7 @@
             autocomplete="off"
           />
         </div>
+
         <!-- Policy Action (hidden, always "ID Card") -->
         <input
           type="hidden"
@@ -53,6 +69,7 @@
           name="Policy_Action__c"
           value="ID Card"
         />
+
         <!-- Policy Number -->
         <div class="mb-3">
           <label
@@ -70,6 +87,7 @@
           />
         </div>
       </div>
+
       <!-- Hidden Salesforce fields -->
       <input type="hidden" name="oid" value="00DU7000006EuID" />
       <input
@@ -77,17 +95,17 @@
         name="retURL"
         value="https://bennettandporter.com/"
       />
-      <input type="hidden" name="first_name" value="ID Card"/>
+      <input type="hidden" name="first_name" value="ID Card" />
       <input type="hidden" name="last_name" value="Cincinnati" />
       <input type="hidden" name="status" value="New" />
       <input type="hidden" name="phone" value="19134736129" />
       <input type="hidden" name="lead_source" value="Web Form" />
       <input type="hidden" name="delete_Action_Form__c" value="1" />
-      <input type="hidden" name="Carrier__c" value ="Cincinnati">
+      <input type="hidden" id="00NU7000007OdKL" name="Carrier__c" value="Cincinnati" />
       <input type="hidden" name="Form_Captured_Data__c" />
-      <input type="hidden" name="Form_Missing_Data__c" />      
-      <input type="hidden" name="company" value="Cincinnati"/>
-      
+      <input type="hidden" name="Form_Missing_Data__c" />
+      <input type="hidden" name="company" value="Cincinnati" />
+
       <!-- Submit button -->
       <div class="flex justify-end mt-6">
         <button
@@ -108,9 +126,7 @@
       aria-modal="true"
       aria-labelledby="dialogTitle"
     >
-      <div
-        class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg text-gray-800"
-      >
+      <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg text-gray-800">
         <h3 id="dialogTitle" class="text-lg font-semibold mb-4"></h3>
         <ul id="missingFieldsList" class="mb-4 text-red-600 text-sm"></ul>
         <div class="flex justify-end space-x-3" id="dialogButtons">
@@ -130,109 +146,155 @@
       </div>
     </div>
 
-   <script>
-document.addEventListener("DOMContentLoaded", function () {
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("mainForm");
+        const reviewBtn = document.getElementById("reviewBtn");
+        const dialog = document.getElementById("dialog");
+        const dialogTitle = document.getElementById("dialogTitle");
+        const missingFieldsList = document.getElementById("missingFieldsList");
+        const proceedBtn = document.getElementById("proceedBtn");
+        const editBtn = document.getElementById("editBtn");
+        const allFormDataTextarea = document.getElementById("00NU7000008TS4L");
 
-  const form = document.getElementById("mainForm");
-  const reviewBtn = document.getElementById("reviewBtn");
-  const dialog = document.getElementById("dialog");
-  const dialogTitle = document.getElementById("dialogTitle");
-  const missingFieldsList = document.getElementById("missingFieldsList");
-  const proceedBtn = document.getElementById("proceedBtn");
-  const editBtn = document.getElementById("editBtn");
-  const fieldData = [
-    { id: "email", label: "Email", type: "email" },
-    { id: "00NU7000005zuX3", label: "Policy Number" },
-  ];
+        const fieldData = [
+          { id: "email", label: "Email", type: "email" },
+          { id: "00NU7000005zuX3", label: "Policy Number" },
+        ];
 
-  function validateFields() {
-    const missing = [];
-    fieldData.forEach((field) => {
-      const input = document.getElementById(field.id);
-      if (field.type === "email") {
-        if (!input.value.trim() || !input.checkValidity()) {
-          missing.push(field.label);
+        function captureAllFormDataAsJSON() {
+          const formData = {};
+          const excludeFields = [
+            "oid", "OrgId",
+            "retURL", "ReturnURL",
+            "first_name", "FirstName",
+            "last_name", "LastName",
+            "status", "Status",
+            "phone", "Phone",
+            "lead_source", "LeadSource",
+            "delete_Action_Form__c", "delete_Action_Form",
+            "company", "Company"
+          ];
+
+          const formElements = form.querySelectorAll("input, textarea, select");
+
+          formElements.forEach((element) => {
+            if (
+              element.name &&
+              element.name !== "Form_Captured_Data__c" &&
+              element.name !== "Form_Missing_Data__c" &&
+              element.name !== "00NU7000008TS4L"
+            ) {
+              let fieldName = element.name.replace(/__c$/, "");
+
+              const fieldMapping = {
+                email: "Email",
+                Policy_Number__c: "PolicyNumber",
+                Policy_Action__c: "PolicyAction",
+                Carrier__c: "Carrier",
+              };
+
+              fieldName = fieldMapping[fieldName] || fieldName;
+
+              if (
+                !excludeFields.includes(fieldName) &&
+                !excludeFields.includes(element.name)
+              ) {
+                formData[fieldName] = element.value || "";
+              }
+            }
+          });
+
+          return JSON.stringify(formData, null, 2);
         }
-      } else {
-        if (!input.value.trim()) {
-          missing.push(field.label);
+
+        function validateFields() {
+          const missing = [];
+          fieldData.forEach((field) => {
+            const input = document.getElementById(field.id);
+            if (field.type === "email") {
+              if (!input.value.trim() || !input.checkValidity()) {
+                missing.push(field.label);
+              }
+            } else {
+              if (!input.value.trim()) {
+                missing.push(field.label);
+              }
+            }
+          });
+          return missing;
         }
-      }
-    });
-    return missing;
-  }
-  // FORM CAPTURE & MISSING
-  function captureFormAudit() {
-    const captured = [];
-    const missing = [];
 
-    fieldData.forEach(field => {
-      const el = document.getElementById(field.id);
-      if (el && el.value.trim()) {
-        captured.push(`${field.label} = ${el.value.trim()}`);
-      } else {
-        missing.push(field.label);
-      }
-    });
+        function captureFormAudit() {
+          const captured = [];
+          const missing = [];
 
-    let capturedField = document.getElementById("Form_Captured_Data__c");
-    let missingField = document.getElementById("Form_Missing_Data__c");
+          fieldData.forEach((field) => {
+            const el = document.getElementById(field.id);
+            if (el && el.value.trim()) {
+              captured.push(`${field.label} = ${el.value.trim()}`);
+            } else {
+              missing.push(field.label);
+            }
+          });
 
-    if (!capturedField) {
-      capturedField = document.createElement("input");
-      capturedField.type = "hidden";
-      capturedField.name = "Form_Captured_Data__c";
-      capturedField.id = "Form_Captured_Data__c";
-      form.appendChild(capturedField);
-    }
+          let capturedField = document.querySelector('input[name="Form_Captured_Data__c"]');
+          let missingField = document.querySelector('input[name="Form_Missing_Data__c"]');
 
-    if (!missingField) {
-      missingField = document.createElement("input");
-      missingField.type = "hidden";
-      missingField.name = "Form_Missing_Data__c";
-      missingField.id = "Form_Missing_Data__c";
-      form.appendChild(missingField);
-    }
+          if (!capturedField) {
+            capturedField = document.createElement("input");
+            capturedField.type = "hidden";
+            capturedField.name = "Form_Captured_Data__c";
+            form.appendChild(capturedField);
+          }
 
-    capturedField.value = captured.join("\n");
-    missingField.value = missing.join("\n");
-  }
+          if (!missingField) {
+            missingField = document.createElement("input");
+            missingField.type = "hidden";
+            missingField.name = "Form_Missing_Data__c";
+            form.appendChild(missingField);
+          }
 
-  // DIALOG FLOW (unchanged)
-  reviewBtn.addEventListener("click", () => {
-    const missing = validateFields();
-    if (missing.length) {
-      dialogTitle.textContent =
-        "Below Mandatory Fields are missing and the Team will contact you shortly.";
-      missingFieldsList.innerHTML = missing.map((f) => `<li>${f}</li>`).join("");
-    } else {
-      dialogTitle.textContent =
-        "All mandatory fields are completed. Ready to submit your request?";
-      missingFieldsList.innerHTML = "";
-    }
-    dialog.classList.remove("hidden");
-  });
+          capturedField.value = captured.join("\\n");
+          missingField.value = missing.join("\\n");
+        }
 
-  editBtn.addEventListener("click", () => {
-    dialog.classList.add("hidden");
-  });
+        reviewBtn.addEventListener("click", () => {
+          const missing = validateFields();
+          allFormDataTextarea.value = captureAllFormDataAsJSON();
 
-  proceedBtn.addEventListener("click", () => {
-    dialog.classList.add("hidden");
+          if (missing.length) {
+            dialogTitle.textContent =
+              "Below Mandatory Fields are missing and the Team will contact you shortly.";
+            missingFieldsList.innerHTML = missing.map((f) => `<li>${f}</li>`).join("");
+          } else {
+            dialogTitle.textContent =
+              "All mandatory fields are completed. Ready to submit your request?";
+            missingFieldsList.innerHTML = "";
+          }
+          dialog.classList.remove("hidden");
+        });
 
-    captureFormAudit();
+        proceedBtn.addEventListener("click", () => {
+          dialog.classList.add("hidden");
+          captureFormAudit();
+          form.submit();
+        });
 
-    form.submit();
-  });
-  window.addEventListener("click", (e) => {
-    if (e.target === dialog) dialog.classList.add("hidden");
-  });
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !dialog.classList.contains("hidden")) {
-      dialog.classList.add("hidden");
-    }
-  });
-});
-</script>
-</body>
+        editBtn.addEventListener("click", () => {
+          dialog.classList.add("hidden");
+        });
+
+        window.addEventListener("click", (e) => {
+          if (e.target === dialog) dialog.classList.add("hidden");
+        });
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && !dialog.classList.contains("hidden")) {
+            dialog.classList.add("hidden");
+          }
+        });
+      });
+    </script>
+  </body>
 </html>
